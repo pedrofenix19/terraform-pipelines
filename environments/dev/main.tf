@@ -20,7 +20,7 @@ module "servers" {
   source  = "pedrofenix19/awsec2/pedrodeniz"
   version = "0.0.4"
   environment = "dev"
-  instance_name_prefix = "pedro"
+  instance_name_prefix = "pedro-rds"
   subnet_ids = module.vpc.public_subnets_ids
   ami = "ami-0ebfd941bbafe70c6"
 }
