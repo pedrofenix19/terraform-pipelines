@@ -66,6 +66,14 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      - uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: pedrofenix19
+          minimum-approvals: 1
+          issue-title: "Desplegando a prod"
+          issue-body: "Por favor aprobar el paso a prod"
+
       # Terraform Apply (Despliegue en dev y prod)
       - name: Terraform Apply
         if: github.ref == 'refs/heads/master'  # Solo aplicar en producción
@@ -75,4 +83,3 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        environment: prod  # Asociar este paso al entorno prod para requerir aprobación
