@@ -14,8 +14,11 @@ env:
   AWS_REGION: 'us-east-1'
 
 jobs:
-  terraform:
+  set-environment:
     runs-on: ubuntu-latest
+    outputs:
+      tf_directory: ${{ steps.set-env.outputs.tf_directory }}
+      environment: ${{ steps.set-env.outputs.environment }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v3
@@ -27,67 +30,69 @@ jobs:
             echo "Environment es prod"
             echo "environment=prod" >> $GITHUB_ENV
             echo "tf_directory=environments/prod" >> $GITHUB_ENV
+            echo "::set-output name=tf_directory::environments/prod"
+            echo "::set-output name=environment::prod"
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "Environment es dev"
             echo "environment=dev" >> $GITHUB_ENV
             echo "tf_directory=environments/dev" >> $GITHUB_ENV
+            echo "::set-output name=tf_directory::environments/dev"
+            echo "::set-output name=environment::dev"
           fi
 
+  install-terraform:
+    runs-on: ubuntu-latest
+    needs: set-environment
+    steps:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.9.6
 
-      - name: Terraform Init
-        run: |
-          cd ${{ env.tf_directory }}
-          terraform init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        continue-on-error: false
-
-      # Validación de Terraform antes de Plan y Apply
+  terraform-validate:
+    runs-on: ubuntu-latest
+    needs: install-terraform
+    steps:
       - name: Terraform Validate
         run: |
-          cd ${{ env.tf_directory }}
+          cd ${{ needs.set-environment.outputs.tf_directory }}
           terraform validate
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        continue-on-error: false
 
-      # Pruebas de Terraform antes de Plan y Apply
+  terraform-test:
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    steps:
       - name: Terraform Test
         run: |
-          cd ${{ env.tf_directory }}
+          cd ${{ needs.set-environment.outputs.tf_directory }}
           terraform plan -detailed-exitcode
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      # Terraform Plan
+  terraform-plan:
+    runs-on: ubuntu-latest
+    needs: terraform-test
+    steps:
       - name: Terraform Plan
         run: |
-          cd ${{ env.tf_directory }}
+          cd ${{ needs.set-environment.outputs.tf_directory }}
           terraform plan
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: pedrofenix19
-          minimum-approvals: 1
-          issue-title: "Desplegando a prod"
-          issue-body: "Por favor aprobar el paso a prod"
-
-      # Terraform Apply (Despliegue en dev y prod)
+  terraform-apply:
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/master'  # Solo ejecutar en producción
+    steps:
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/master'  # Solo aplicar en producción
         run: |
-          cd ${{ env.tf_directory }}
+          cd ${{ needs.set-environment.outputs.tf_directory }}
           terraform apply -auto-approve
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
