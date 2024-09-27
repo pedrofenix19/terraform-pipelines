@@ -16,6 +16,7 @@ env:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }} # Configura el entorno aquí
 
     steps:
       - name: Checkout the repository
@@ -76,6 +77,3 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        environment:
-          name: ${{ env.environment }}
-          url: ${{ env.tf_directory }}
