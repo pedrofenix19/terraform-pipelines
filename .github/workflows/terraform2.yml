@@ -67,15 +67,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      # Aprobación manual para el despliegue en producción
-      - name: Manual approval before production deploy
-        if: ${{ github.ref == 'refs/heads/master' }}
-        uses: pingcap/action-await-approval@v1
-        with:
-          approvers: "your-github-username"
-          timeout-minutes: 60
-
-      # Terraform Apply (solo después de la aprobación manual para prod)
+      # Terraform Apply (Despliegue en dev y prod)
       - name: Terraform Apply
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev'
         run: |
@@ -84,3 +76,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        environment:
+          name: ${{ env.environment }}
+          url: ${{ env.tf_directory }}
