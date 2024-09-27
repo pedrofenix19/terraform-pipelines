@@ -12,7 +12,7 @@ module "database" {
   source = "../../modules/rds"
 
   environment = "prod"
-  rds_instance_name = "pedro"
+  rds_instance_name = "pedro-rds"
   rds_subnets_ids = module.vpc.private_subnets_ids
 }
 
